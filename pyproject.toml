@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chatterbox-finnish-nano"
+version = "0.1.0"
+description = "Finnish language adaptation runtime for Chatterbox Nano"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "JARVIS Finnish Nano project" }]
+dependencies = [
+  "chatterbox-tts @ git+https://github.com/resemble-ai/chatterbox.git@5de7a54aa4e5e2baadb0182dde554908b48b85c2",
+  "huggingface-hub>=1.4,<2",
+  "librosa==0.11.0",
+  "num2words>=0.5.14,<1",
+  "numpy>=1.26,<3",
+  "resampy>=0.4.3,<1",
+  "safetensors>=0.5,<1",
+  "soundfile>=0.13,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9"]
+
+[project.scripts]
+cbnano-fi-infer = "chatterbox_nano_fi.infer:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

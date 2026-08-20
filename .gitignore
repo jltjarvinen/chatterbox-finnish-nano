@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.wav
+models/
+dist/
+build/
+*.egg-info/
+space/chatterbox/
+space/CHATTERBOX_REVISION.txt
+
+# Generated release and deployment artifacts
+MANIFEST.sha256
+space/
