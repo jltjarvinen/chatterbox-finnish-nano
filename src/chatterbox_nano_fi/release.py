@@ -105,9 +105,12 @@ sf.write("out.wav", wav.squeeze(0).cpu().float().numpy(), model.sr)
 No reference recording is required. A new speaker can also be supplied through
 Chatterbox Nano's normal reference-conditioning path.
 
-## Demo
+## Links
 
-Try the hosted demo in the [Chatterbox Finnish Nano Space](https://huggingface.co/spaces/JJarvinen/chatterbox-finnish-nano).
+- [Source code on GitHub](https://github.com/jltjarvinen/chatterbox-finnish-nano)
+- [Live demo on Hugging Face Spaces](https://huggingface.co/spaces/JJarvinen/chatterbox-finnish-nano)
+- [Base Chatterbox Nano model](https://huggingface.co/ResembleAI/chatterbox-nano)
+
 The Space uses ZeroGPU when available and also supports CPU fallback.
 
 ## Training data and recipe

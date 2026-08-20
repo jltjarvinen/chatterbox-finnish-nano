@@ -4,6 +4,12 @@
 
 The selected release checkpoint is **015b step 20**. It works without a user-provided reference recording by retaining Nano's built-in `conds.pt` conditioning.
 
+## Links
+
+- [Model on Hugging Face](https://huggingface.co/JJarvinen/chatterbox-finnish-nano)
+- [Live demo on Hugging Face Spaces](https://huggingface.co/spaces/JJarvinen/chatterbox-finnish-nano)
+- [Source code on GitHub](https://github.com/jltjarvinen/chatterbox-finnish-nano)
+
 ## Status
 
 This is a first release, not a perfect Finnish TTS model. Listening tests showed natural Finnish speech and a clear improvement over stock Nano. The remaining observed issues are occasional dropped syllables/short fragments and occasional long quiet or low-level noisy tails.
