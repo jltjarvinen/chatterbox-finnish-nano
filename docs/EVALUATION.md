@@ -1,22 +1,27 @@
-# Evaluation notes for v0.1.0
+# Evaluation notes for v0.1.2
 
-This release was selected primarily through controlled subjective listening rather than a formal MOS/WER benchmark.
+v0.1.2 was selected using controlled listening and a reproducible automatic
+release evaluation.
 
-## Checkpoint selection
+## Automatic Finnish evaluation
 
-- `014 epoch 3` was judged highly natural and already good Finnish.
-- A conservative real-audio micro-polish from that parent improved quality slightly by `015b step 20`.
-- Continuing the same micro-polish to cumulative steps 30, 40, 60 and 80 produced no meaningful audible improvement, so step 20 was retained.
-- An earlier aggressive full-T3 real-audio polish at LR `1e-5` collapsed into repetitive speech and was discarded.
+A fixed 100-utterance Finnish set scored:
 
-## Conditioning checks
+```text
+WER   10.60%
+CER    1.65%
+exact 54%
+```
 
-- Built-in `conds.pt` reference-free generation remained good after Finnish adaptation.
-- Rautatie-conditioned and built-in-conditioned evaluation sounded very similar during the full-T3 stage.
-- After selecting `015b step 20`, reference conditioning with a previously unseen speaker was sanity-tested and worked correctly.
+The values are ASR-based intelligibility proxies, not MOS.
 
-## Remaining audible defects
+## EOS stability
 
-The main observed defects are stochastic rather than constant: an occasional syllable/short fragment may be dropped, and some generations can include a long quiet or low-level noisy tail after the spoken content. These were not considered blockers for v0.1.0.
+The 100-generation release smoke produced 2 structured runaway events over one
+second and 1 over two seconds. It produced no generation-limit hits and no
+tail45 events over one second.
 
-No claim of a globally optimal sampling preset is made in this release.
+## Conditioning
+
+The built-in no-reference voice is the primary release mode. Optional reference
+conditioning was also smoke-tested successfully.

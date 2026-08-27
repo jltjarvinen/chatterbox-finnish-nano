@@ -1,7 +1,5 @@
-from chatterbox_nano_fi import RELEASE_CHECKPOINT, RELEASE_NAME, RESEARCH_BUCKET_PATH
+from chatterbox_nano_fi import RELEASE_CHECKPOINT, RELEASE_NAME
 
-
-def test_release_candidate_is_015b_step_20():
-    assert RELEASE_NAME == "v0.1.0"
-    assert RELEASE_CHECKPOINT == "015b-step-020"
-    assert RESEARCH_BUCKET_PATH.endswith("real-audio-micro-polish-v1/checkpoints/step-020.safetensors")
+def test_release_identity_is_public_version_only():
+    assert RELEASE_NAME == "v0.1.2"
+    assert RELEASE_CHECKPOINT == "v0.1.2"

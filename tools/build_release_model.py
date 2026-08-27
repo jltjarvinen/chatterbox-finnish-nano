@@ -16,7 +16,7 @@ from chatterbox_nano_fi import (
     BASE_MODEL_REPO,
     BASE_MODEL_REVISION,
     RELEASE_NAME,
-    RESEARCH_BUCKET_PATH,
+    RELEASE_T3_SHA256,
 )
 
 from chatterbox_nano_fi.release import sha256, validate_model_files, write_release_metadata
@@ -30,11 +30,11 @@ def fetch_bucket_checkpoint(bucket: str, bucket_path: str, destination: Path) ->
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build the v0.1.0 model directory from 015b step 20")
-    parser.add_argument("--checkpoint", help="Local 015b step-020 safetensors. If omitted, fetch from --bucket.")
+    parser = argparse.ArgumentParser(description="Build Chatterbox Finnish Nano v0.1.2")
+    parser.add_argument("--checkpoint", help="Local v0.1.2 T3 safetensors. If omitted, fetch from --bucket and --bucket-path.")
     parser.add_argument("--bucket", default=os.getenv("HF_BUCKET"))
-    parser.add_argument("--bucket-path", default=RESEARCH_BUCKET_PATH)
-    parser.add_argument("--output", default="models/chatterbox-nano-fi-v0.1.0")
+    parser.add_argument("--bucket-path", help="Bucket object path. Required with --bucket.")
+    parser.add_argument("--output", default="models/chatterbox-nano-fi-v0.1.2")
     parser.add_argument("--repo-id", help="Optional Hugging Face model repo ID; also used in the generated model card")
     parser.add_argument("--push", action="store_true", help="Upload the verified model directory to --repo-id")
     parser.add_argument("--public", action="store_true", help="When creating a repo with --push, make it public")
@@ -58,21 +58,27 @@ def main() -> None:
             if not checkpoint.exists():
                 raise FileNotFoundError(checkpoint)
         else:
-            if not args.bucket:
-                raise ValueError("Set --checkpoint or --bucket / HF_BUCKET")
-            checkpoint = tmp / "015b-step-020.safetensors"
+            if not args.bucket or not args.bucket_path:
+                raise ValueError("Set --checkpoint, or set both --bucket and --bucket-path")
+            checkpoint = tmp / "release-t3.safetensors"
             print(f"Fetching {args.bucket_path} from bucket {args.bucket}")
             fetch_bucket_checkpoint(args.bucket, args.bucket_path, checkpoint)
+
+        if sha256(checkpoint) != RELEASE_T3_SHA256:
+            raise RuntimeError("v0.1.2 checkpoint SHA256 mismatch")
 
         snapshot = Path(
             snapshot_download(
                 repo_id=BASE_MODEL_REPO,
                 revision=BASE_MODEL_REVISION,
                 token=os.getenv("HF_TOKEN") or None,
+                ignore_patterns=["s3gen.safetensors"],
             )
         )
         staging = tmp / "model"
         shutil.copytree(snapshot, staging, symlinks=False)
+
+        (staging / "s3gen.safetensors").unlink(missing_ok=True)
 
         base_t3 = staging / "t3_nano_v1.safetensors"
         base_keys = set(load_file(str(base_t3), device="cpu"))
@@ -81,7 +87,7 @@ def main() -> None:
             missing = sorted(base_keys - release_keys)
             unexpected = sorted(release_keys - base_keys)
             raise RuntimeError(
-                f"015b checkpoint does not match Nano T3 contract; missing={missing[:8]}, unexpected={unexpected[:8]}"
+                f"v0.1.2 checkpoint does not match Nano T3 contract; missing={missing[:8]}, unexpected={unexpected[:8]}"
             )
 
         shutil.copy2(checkpoint, base_t3)

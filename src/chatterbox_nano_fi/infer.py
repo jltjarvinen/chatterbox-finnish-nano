@@ -50,9 +50,11 @@ def resolve_model(model_ref: str) -> Path:
     path = Path(model_ref).expanduser()
     if path.is_dir():
         return path.resolve()
+    repo_id, revision = (model_ref.rsplit("@", 1) if "@" in model_ref else (model_ref, None))
     return Path(
         snapshot_download(
-            repo_id=model_ref,
+            repo_id=repo_id,
+            revision=revision,
             token=os.getenv("HF_TOKEN") or None,
             allow_patterns=[
                 "*.safetensors",
@@ -126,7 +128,7 @@ def synthesize_loaded(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Finnish speech synthesis with Chatterbox Nano v0.1")
+    parser = argparse.ArgumentParser(description="Finnish speech synthesis with Chatterbox Nano v0.1.2")
     parser.add_argument("--model", required=True, help="Local exported model directory or Hugging Face model repo ID")
     parser.add_argument(
         "--reference-audio",
@@ -141,13 +143,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Sampling seed. Omit for a fresh random seed; set a value for reproducible output.",
     )
-    parser.add_argument("--expand-numbers", action="store_true")
+    number_group = parser.add_mutually_exclusive_group()
+    number_group.add_argument("--expand-numbers", dest="expand_numbers", action="store_true")
+    number_group.add_argument("--no-expand-numbers", dest="expand_numbers", action="store_false")
+    parser.set_defaults(expand_numbers=None)
     parser.add_argument("--max-chars", type=int, default=220)
     parser.add_argument("--pause-seconds", type=float, default=0.18)
-    parser.add_argument("--temperature", type=float, default=0.75)
-    parser.add_argument("--top-p", type=float, default=0.92)
-    parser.add_argument("--top-k", type=int, default=600)
-    parser.add_argument("--repetition-penalty", type=float, default=1.2)
+    parser.add_argument("--temperature", type=float, default=None)
+    parser.add_argument("--top-p", type=float, default=None)
+    parser.add_argument("--top-k", type=int, default=None)
+    parser.add_argument("--repetition-penalty", type=float, default=None)
     return parser
 
 
@@ -165,7 +170,21 @@ def main() -> None:
 
     model_dir = resolve_model(args.model)
     fi_config = load_fi_config(model_dir)
-    expand_numbers = args.expand_numbers or bool(fi_config.get("normalization", {}).get("expand_numbers", False))
+    normalization = fi_config.get("normalization", {})
+    sampling = fi_config.get("sampling_defaults", {})
+    expand_numbers = (
+        bool(normalization.get("expand_numbers", True))
+        if args.expand_numbers is None
+        else bool(args.expand_numbers)
+    )
+    temperature = args.temperature if args.temperature is not None else float(sampling.get("temperature", 0.8))
+    top_p = args.top_p if args.top_p is not None else float(sampling.get("top_p", 0.95))
+    top_k = args.top_k if args.top_k is not None else int(sampling.get("top_k", 1000))
+    repetition_penalty = (
+        args.repetition_penalty
+        if args.repetition_penalty is not None
+        else float(sampling.get("repetition_penalty", 1.2))
+    )
     model = load_model(model_dir, reference_audio=args.reference_audio, device=select_device(args.device))
     output = synthesize_loaded(
         model=model,
@@ -174,10 +193,10 @@ def main() -> None:
         expand_numbers=expand_numbers,
         max_chars=args.max_chars,
         pause_seconds=args.pause_seconds,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        top_k=args.top_k,
-        repetition_penalty=args.repetition_penalty,
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+        repetition_penalty=repetition_penalty,
     )
     LOGGER.info("Wrote %s", output)
 
