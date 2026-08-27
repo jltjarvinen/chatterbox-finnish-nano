@@ -14,6 +14,27 @@ _PERCENT = re.compile(r"(?<!\w)(-?\d+(?:[.,]\d+)?)\s*%")
 _EURO = re.compile(r"(?<!\w)(-?\d+(?:[.,]\d+)?)\s*(?:€|eur\b)", re.I)
 _INTEGER = re.compile(r"(?<![\w.,])(-?\d{1,9})(?![\w.,])")
 _DECIMAL = re.compile(r"(?<!\w)(-?\d+)[,.](\d+)(?!\w)")
+_DATE_DMY = re.compile(r"(?<!\d)(\d{1,2})\.(\d{1,2})\.(\d{4})(?!\d)")
+_DATE_DM = re.compile(r"(?<!\d)(\d{1,2})\.(\d{1,2})\.(?!\d)")
+_DATE_ISO = re.compile(r"(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)")
+_TIME_KLO = re.compile(r"\b(?:klo|kello)\s*(\d{1,2})[.:](\d{2})(?!\d)", re.I)
+_TIME_COLON = re.compile(r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)")
+
+_MONTHS_PARTITIVE = (
+    "",
+    "tammikuuta",
+    "helmikuuta",
+    "maaliskuuta",
+    "huhtikuuta",
+    "toukokuuta",
+    "kesäkuuta",
+    "heinäkuuta",
+    "elokuuta",
+    "syyskuuta",
+    "lokakuuta",
+    "marraskuuta",
+    "joulukuuta",
+)
 
 _REPLACEMENTS = (
     ("\u00a0", " "),
@@ -21,7 +42,6 @@ _REPLACEMENTS = (
     ("—", "-"),
     ("–", "-"),
     ("−", "-"),
-    (":", ","),
     ("“", '"'),
     ("”", '"'),
     ("„", '"'),
@@ -55,6 +75,9 @@ def normalize_finnish(text: str, *, expand_numbers: bool = False) -> str:
     if expand_numbers:
         text = _expand_numbers(text)
 
+    # Preserve the old punctuation behavior for colons that were not clock
+    # times handled above.
+    text = text.replace(":", ",")
     text = _SPACES.sub(" ", text).strip()
     if text and text[0].islower():
         text = text[0].upper() + text[1:]
@@ -96,7 +119,61 @@ def _fi_number(value: str) -> str:
         return _fallback_fi_number(number)
 
 
+def _fi_ordinal(value: int) -> str:
+    try:
+        from num2words import num2words
+
+        return num2words(value, lang="fi", to="ordinal")
+    except ImportError:
+        return _fallback_fi_number(value)
+
+
+def _date_words(day: int, month: int, year: int | None = None) -> str | None:
+    import datetime as _datetime
+
+    try:
+        _datetime.date(year if year is not None else 2000, month, day)
+    except ValueError:
+        return None
+    parts = [_fi_ordinal(day), _MONTHS_PARTITIVE[month]]
+    if year is not None:
+        parts.append(_fi_number(str(year)))
+    return " ".join(parts)
+
+
+def _time_words(hour: int, minute: int, *, prefix: bool) -> str | None:
+    if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+        return None
+    if minute == 0:
+        spoken = _fi_number(str(hour))
+    elif minute < 10:
+        spoken = f"{_fi_number(str(hour))} nolla {_fi_number(str(minute))}"
+    else:
+        spoken = f"{_fi_number(str(hour))} {_fi_number(str(minute))}"
+    return f"kello {spoken}" if prefix else spoken
+
+
 def _expand_numbers(text: str) -> str:
+    def date_dmy(match: re.Match[str]) -> str:
+        day, month, year = map(int, match.groups())
+        return _date_words(day, month, year) or match.group(0)
+
+    def date_dm(match: re.Match[str]) -> str:
+        day, month = map(int, match.groups())
+        return _date_words(day, month) or match.group(0)
+
+    def date_iso(match: re.Match[str]) -> str:
+        year, month, day = map(int, match.groups())
+        return _date_words(day, month, year) or match.group(0)
+
+    def time_klo(match: re.Match[str]) -> str:
+        hour, minute = map(int, match.groups())
+        return _time_words(hour, minute, prefix=True) or match.group(0)
+
+    def time_colon(match: re.Match[str]) -> str:
+        hour, minute = map(int, match.groups())
+        return _time_words(hour, minute, prefix=False) or match.group(0)
+
     def decimal(match: re.Match[str]) -> str:
         whole, fraction = match.group(1), match.group(2)
         sign = "miinus " if whole.startswith("-") else ""
@@ -104,6 +181,13 @@ def _expand_numbers(text: str) -> str:
         spoken_fraction = " ".join(_fi_number(digit) for digit in fraction)
         return f"{sign}{_fi_number(whole)} pilkku {spoken_fraction}"
 
+    # Date and clock patterns must run before the generic decimal rule so
+    # 27.8.2026 is not interpreted as the decimal number 27.8.
+    text = _DATE_DMY.sub(date_dmy, text)
+    text = _DATE_ISO.sub(date_iso, text)
+    text = _DATE_DM.sub(date_dm, text)
+    text = _TIME_KLO.sub(time_klo, text)
+    text = _TIME_COLON.sub(time_colon, text)
     text = _PERCENT.sub(lambda m: f"{_expand_numbers(m.group(1))} prosenttia", text)
     text = _EURO.sub(lambda m: f"{_expand_numbers(m.group(1))} euroa", text)
     text = _DECIMAL.sub(decimal, text)
