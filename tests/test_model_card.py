@@ -1,8 +1,8 @@
 from chatterbox_nano_fi.release import model_card
 
-def test_model_card_explains_v012_public_release():
+def test_model_card_explains_v013_public_release():
     card = model_card("example/chatterbox-finnish-nano", "abc123")
-    assert "v0.1.2" in card
+    assert "v0.1.3" in card
     assert "14,169" in card
     assert "s3gen_meanflow.safetensors" in card
     assert "s3gen.safetensors" in card

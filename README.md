@@ -1,18 +1,20 @@
 # Chatterbox Finnish Nano
 
-**v0.1.2** is a Finnish-only adaptation of Chatterbox Nano for low-latency
+**v0.1.3** is a Finnish-only adaptation of Chatterbox Nano for low-latency
 conversational TTS.
+
+Canonical public T3: **FP16**
 
 T3 SHA256:
 
 ```text
-5a7fb1eaabff39f22af7274f1a7fc344d2910488c0c5e61c5fb6a863f21bcadc
+d25e3ac95eefefb58c40ad4d5a47b4fa621bc1bd92e91f2d904f622d5458ad26
 ```
 
 ## Links
 
 - Model: https://huggingface.co/JJarvinen/chatterbox-finnish-nano
-- FP16 revision: https://huggingface.co/JJarvinen/chatterbox-finnish-nano/tree/fp16
+- GGUF: https://huggingface.co/JJarvinen/chatterbox-finnish-nano-GGUF
 - Demo: https://huggingface.co/spaces/JJarvinen/chatterbox-finnish-nano
 
 ## Install
@@ -20,7 +22,7 @@ T3 SHA256:
 ```bash
 git clone https://github.com/jltjarvinen/chatterbox-finnish-nano.git
 cd chatterbox-finnish-nano
-git checkout v0.1.2
+git checkout v0.1.3
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -49,33 +51,30 @@ top_k               1000
 repetition_penalty  1.2
 ```
 
-Use the validated FP16 T3 revision with:
-
-```bash
-cbnano-fi-infer \
-  --model JJarvinen/chatterbox-finnish-nano@fp16 \
-  --text "Hyvää huomenta." \
-  --output out-fp16.wav
-```
-
 Reference conditioning remains available through `--reference-audio`.
 
 ## Automatic evaluation
 
-A fixed 100-utterance Finnish set was synthesized and scored with
-Faster-Whisper large-v3-turbo.
+The v0.1.3 final gate was evaluated at FP16 runtime precision.
 
-| Metric | v0.1.2 |
+Finnish quality set:
+
+| Metric | Result |
 | --- | ---: |
-| WER | 10.60% |
-| CER | 1.65% |
-| normalized exact transcript rate | 54% |
+| prompts | 12 |
+| WER | 8.22% |
+| CER | 0.95% |
+| normalized exact transcript rate | 75% |
+
+Finnish EOS-ASR set: WER 8.48%, CER 1.38%, exact 60/100.
+
+Endpoint safety gate: 100 Finnish + 100 English regression-canary generations.
+It produced 0 generation-limit hits, 0 premature >1 s cases, 0 audio tails >1 s,
+and a maximum measured tail of 0.78 s.
 
 These are ASR-based intelligibility proxies, not MOS.
 
-Stock Nano FP16 scored WER 97.94% and CER 34.45% on the same Finnish set.
-
-See [docs/V0.1.2_EVAL.md](docs/V0.1.2_EVAL.md).
+See [docs/V0.1.3_EVAL.md](docs/V0.1.3_EVAL.md).
 
 ## Training
 
@@ -90,7 +89,12 @@ stock Nano
   -> full T3, 3 epochs, LR 1e-4
   -> one continuation epoch, LR 1e-5 to 0
   -> v0.1.2 E4
+  -> constrained EOS projection
+  -> v0.1.3
 ```
+
+The final projection only changes the EOS behavior of the T3 release candidate.
+The locked F32 source projection SHA256 is `5a8bf48cc23938bcf462c26d10a5686616c2081dea94d0a0da983ff590f3fe35`.
 
 See [docs/TRAINING.md](docs/TRAINING.md).
 
@@ -99,26 +103,23 @@ See [docs/TRAINING.md](docs/TRAINING.md).
 The pinned Nano loader uses `s3gen_meanflow.safetensors`. It does not request
 the older `s3gen.safetensors` file.
 
-The final release removes only:
+The final release omits only the unused legacy `s3gen.safetensors`. All other
+runtime files are retained, including `t3_nano_v1.yaml`.
 
-```text
-s3gen.safetensors
-```
+## GGUF / CrispASR
 
-All other files are retained, including `t3_nano_v1.yaml`.
+CrispASR supports Chatterbox Nano directly. The GGUF release contains the custom
+Finnish Nano T3 in F16, Q8_0 and Q4_K forms. Nano reuses the unchanged Chatterbox
+Turbo MeanFlow S3Gen companion. It is not duplicated in the Finnish GGUF repo.
 
-Package size falls from 2,563,656,642 bytes to 1,507,172,022 bytes, a 41.21%
-reduction. Deterministic full and slim tests produced identical T3 tokens and
-byte-identical final waveforms.
+See the GGUF model card for exact commands.
 
 ## Known limitations
 
-T3 generation is autoregressive and stochastic. Rare samples can continue past
-the expected end before EOS.
-
-The 100-generation release smoke produced 2 events over the one-second
-structured-runaway threshold and 1 over two seconds. It produced no
-generation-limit hits and no tail45 events over one second.
+T3 generation is autoregressive and stochastic, so different seeds can produce
+different speech. The v0.1.3 200-case endpoint release gate did not observe any
+>1 s audio tails or >1 s premature cases, but this is a finite validation set,
+not a proof that no stochastic outlier can occur.
 
 Finnish normalization covers common number cases but is not a complete
 linguistic normalization engine.

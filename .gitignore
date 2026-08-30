@@ -12,4 +12,8 @@ space/CHATTERBOX_REVISION.txt
 
 # Generated release and deployment artifacts
 MANIFEST.sha256
-space/
+space/*
+!space/app.py
+!space/requirements.txt
+!space/README.md
+!space/finnish_text.py

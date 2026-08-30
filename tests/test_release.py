@@ -6,13 +6,13 @@ from chatterbox_nano_fi import RELEASE_CHECKPOINT, RELEASE_NAME, RELEASE_T3_SHA2
 from chatterbox_nano_fi.release import REQUIRED_MODEL_FILES, release_metadata, validate_model_files
 
 def test_release_identity():
-    assert RELEASE_NAME == "v0.1.2"
-    assert RELEASE_CHECKPOINT == "v0.1.2"
-    assert RELEASE_T3_SHA256 == "5a7fb1eaabff39f22af7274f1a7fc344d2910488c0c5e61c5fb6a863f21bcadc"
+    assert RELEASE_NAME == "v0.1.3"
+    assert RELEASE_CHECKPOINT == "v0.1.3"
+    assert RELEASE_T3_SHA256 == "d25e3ac95eefefb58c40ad4d5a47b4fa621bc1bd92e91f2d904f622d5458ad26"
 
 def test_release_metadata_identity():
     meta = release_metadata(RELEASE_T3_SHA256)
-    assert meta["release"] == "v0.1.2"
+    assert meta["release"] == "v0.1.3"
     assert meta["release_checkpoint"] == RELEASE_CHECKPOINT
     assert meta["language"] == "fi"
     assert meta["normalization"]["expand_numbers"] is True

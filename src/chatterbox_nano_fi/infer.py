@@ -128,7 +128,7 @@ def synthesize_loaded(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Finnish speech synthesis with Chatterbox Nano v0.1.2")
+    parser = argparse.ArgumentParser(description="Finnish speech synthesis with Chatterbox Nano v0.1.3")
     parser.add_argument("--model", required=True, help="Local exported model directory or Hugging Face model repo ID")
     parser.add_argument(
         "--reference-audio",

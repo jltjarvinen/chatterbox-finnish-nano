@@ -37,13 +37,13 @@ def validate_model_files(model_dir: Path) -> None:
     if missing:
         raise RuntimeError(f"Model directory is incomplete, missing: {missing}")
     if (model_dir / "s3gen.safetensors").exists():
-        raise RuntimeError("v0.1.2 slim package must not contain s3gen.safetensors")
+        raise RuntimeError("v0.1.3 slim package must not contain s3gen.safetensors")
 
 def release_metadata(checkpoint_sha: str) -> dict:
     return {
         "language": "fi",
         "release": RELEASE_NAME,
-        "precision": "bf16",
+        "precision": "fp16",
         "release_checkpoint": RELEASE_CHECKPOINT,
         "base_model": BASE_MODEL_REPO,
         "base_revision": BASE_MODEL_REVISION,
@@ -61,9 +61,29 @@ def release_metadata(checkpoint_sha: str) -> dict:
             "repetition_penalty": 1.2,
         },
         "automatic_eval": {
-            "wer": 0.10603829160530191,
-            "cer": 0.01647537948907812,
-            "exact_rate": 0.54,
+            "runtime_precision": "FP16",
+            "quality_fi": {
+                "n": 12,
+                "wer": 0.0821917808219178,
+                "cer": 0.009487666034155597,
+                "exact": 9,
+                "exact_rate": 0.75,
+            },
+            "eos_asr_fi": {
+                "n": 100,
+                "wer": 0.08484848484848485,
+                "cer": 0.013821138211382113,
+                "exact": 60,
+                "exact_rate": 0.6,
+            },
+            "endpoint_gate": {
+                "generations": 200,
+                "generation_limit_hits": 0,
+                "premature_over_1s": 0,
+                "tail45_over_1s": 0,
+                "tail45_over_2s": 0,
+                "max_tail45_sec": 0.78,
+            },
             "note": "ASR-based intelligibility proxy, not MOS",
         },
         "runtime_package": {
@@ -89,17 +109,17 @@ def model_card(repo_id: str | None, checkpoint_sha: str) -> str:
         "- text-to-speech\n"
         "- voice-cloning\n"
         "---\n\n"
-        "# Chatterbox Finnish Nano v0.1.2\n\n"
+        "# Chatterbox Finnish Nano v0.1.3\n\n"
         "Finnish-only adaptation of Chatterbox Nano for conversational TTS.\n\n"
         f"Selected checkpoint: `{RELEASE_CHECKPOINT}`\n\n"
         f"T3 SHA256: `{checkpoint_sha}`\n\n"
         "## Automatic evaluation\n\n"
-        "| Metric | v0.1.2 BF16 |\n"
+        "| Metric | v0.1.3 FP16 |\n"
         "| --- | ---: |\n"
-        "| WER | 0.1060 |\n"
-        "| CER | 0.01648 |\n"
-        "| normalized exact transcript rate | 54% |\n\n"
-        "WER and CER are ASR-based intelligibility proxies, not human MOS measurements.\n\n"
+        "| WER | 0.0822 |\n"
+        "| CER | 0.00949 |\n"
+        "| normalized exact transcript rate | 75% |\n\n"
+        "WER and CER are ASR-based intelligibility proxies, not human MOS measurements.\n\n""Endpoint gate: 200 generations, 0 generation-limit hits, 0 premature >1 s cases, and 0 audio tails >1 s.\n\n"
         "## Use\n\n"
         "Install the companion runtime and run:\n\n"
         "```bash\n"
@@ -109,12 +129,12 @@ def model_card(repo_id: str | None, checkpoint_sha: str) -> str:
         "  --output out.wav\n"
         "```\n\n"
         "Finnish number-to-speech normalization is enabled by default.\n"
-        "The FP16 T3 variant is available at model revision `fp16`.\n\n"
+        "The public main revision contains the validated FP16 T3.\n\n"
         "## Training\n\n"
         "The release uses 14,169 Finnish S3 target sequences from the strict-QC and regeneration pipeline.\n"
         "QC trailing silence was converted to S3-token trimming at 25 Hz before training.\n"
         "Stock Nano was adapted with full-T3 text and speech next-token CE for three epochs at LR 1e-4, "
-        "followed by one continuation epoch at LR 1e-5 to zero.\n\n"
+        "followed by one continuation epoch at LR 1e-5 to zero, then the final constrained EOS projection.\n\n"
         "## Runtime package\n\n"
         "The pinned Nano runtime loads `s3gen_meanflow.safetensors`. "
         "The legacy `s3gen.safetensors` file is unused and intentionally omitted. "
